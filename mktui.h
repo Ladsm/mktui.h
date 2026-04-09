@@ -7,12 +7,12 @@
  *  ░███      ░███   ░███ ░░███       ░███      ░███   ░███   ░███       ░███    ░███
  *  █████     █████  █████ ░░████     █████     ░░████████    █████  ██  █████   █████
  * ░░░░░     ░░░░░  ░░░░░   ░░░░     ░░░░░       ░░░░░░░░    ░░░░░  ░░  ░░░░░   ░░░░░
- * 
+ *
  *  mktui — Minimal Cross-Platform TUI Utilities
  *  ------------------------------------------------------------
  *  A lightweight, single-header C++ utility for building
  *  terminal user interfaces (TUIs).
- *  
+ *
  *  It fetures:
  *   - Cross-platform (Windows / Linux / Unix)
  *   - Keyboard + mouse input handling
@@ -39,7 +39,7 @@
  *
  *  License
  *  -------
- * 
+ *
  * MIT License
  *
  * Copyright (c) 2026 Ladsm(https://github.com/ladsm/)
@@ -141,10 +141,10 @@ namespace mktui {
         F9,
         F10,
         F11,
-        F12, 
+        F12,
         Q, W, E, R, T, Y, U, I, O, P,
-         A, S, D, F, G, H, J, K, L,
-             Z, X, C, V, B, N, M,
+        A, S, D, F, G, H, J, K, L,
+        Z, X, C, V, B, N, M,
         MouseMove,
         MouseLeftDown,
         MouseLeftUp,
@@ -613,12 +613,12 @@ namespace mktui {
         return ch;
     }
 #endif
-/*
- * Warning:
- *   - Console state is modified when using mktui::console_guard.
- *   - Avoid mixing with other terminal manipulation libraries.
- *   - Always keep console_guard in scope while running your TUI.
- */
+    /*
+     * Warning:
+     *   - Console state is modified when using mktui::console_guard.
+     *   - Avoid mixing with other terminal manipulation libraries.
+     *   - Always keep console_guard in scope while running your TUI.
+     */
     struct console_guard {
         console_guard() {
 #if defined(_WIN32)
@@ -656,7 +656,7 @@ namespace mktui {
             std::cout << "\033[?25h\033[?1000l\033[?1002l\033[?1006l\033[?1049l\033[2J\033[H\033[!p" << std::flush;
             cleaned = true;
         }
-    };    
+    };
     namespace colors {
         namespace bit8 {
             inline const std::string reset = "\033[0m";
@@ -742,6 +742,12 @@ namespace mktui {
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         std::cerr << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S") << "] " << "[DEBUG] " << msg << "\n" << std::flush;
     }
+#ifndef _WIN32
+    inline bool command_exists(const std::string& cmd) {
+        std::string check = "command -v " + cmd + " > /dev/null 2>&1";
+        return (system(check.c_str()) == 0);
+    }
+#endif
     inline void copy_to_clipboard(const std::string& text) {
 #ifdef _WIN32
         if (!OpenClipboard(nullptr)) return;
@@ -762,15 +768,30 @@ namespace mktui {
             }
         }
         CloseClipboard();
-
 #else
-        FILE* pipe = popen("xclip -selection clipboard", "w");
-        if (pipe) {
-            fwrite(text.c_str(), 1, text.size(), pipe);
-            pclose(pipe);
+        std::string command = "";
+        if (command_exists("pbcopy")) {
+            command = "pbcopy";
+        }
+        else if (command_exists("wl-copy")) {
+            command = "wl-copy";
+        }
+        else if (command_exists("xclip")) {
+            command = "xclip -selection clipboard";
+        }
+        else if (command_exists("xsel")) {
+            command = "xsel --clipboard --input";
+        }
+
+        if (!command.empty()) {
+            FILE* pipe = popen(command.c_str(), "w");
+            if (pipe) {
+                fwrite(text.c_str(), 1, text.size(), pipe);
+                pclose(pipe);
+            }
         }
         else {
-            std::cerr << "Error: Could not open pipe to xclip. Is it installed?" << std::endl;
+            debug_log("Error: No supported clipboard manager found (xclip, xsel, wl-copy, pbcopy).");
         }
 #endif
     }
@@ -780,5 +801,24 @@ namespace mktui {
             Beep(x, y);
             }).detach();
 #endif
+    }
+    struct event {
+        Input_Type input;
+        int mouse_x;
+        int mouse_y;
+    };
+    inline event get_event() {
+        event returner;
+        returner.input = Get_Input();
+        returner.mouse_x = get_MouseX();
+        returner.mouse_y = get_MouseY();
+        return returner;
+    }
+    inline event get_event_nonblocking() {
+        event returner;
+        returner.input = Get_Input_Nonblocking();
+        returner.mouse_x = get_MouseX();
+        returner.mouse_y = get_MouseY();
+        return returner;
     }
 }
