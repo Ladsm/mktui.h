@@ -740,7 +740,10 @@ namespace mktui {
     inline void debug_log(const std::string& msg) {
         auto now = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
-        std::cerr << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S") << "] " << "[DEBUG] " << msg << "\n" << std::flush;
+        std::tm time_info;
+        if (localtime_s(&time_info, &in_time_t) == 0) {
+            std::cerr << "[" << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S") << "] " << "[DEBUG] " << msg << "\n" << std::flush;
+        }
     }
 #ifndef _WIN32
     inline bool command_exists(const std::string& cmd) {
