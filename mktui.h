@@ -81,6 +81,7 @@
 #include <cstring>
 #include <cstdio>
 #include <memory>
+#include <cctype>
 
 namespace mktui {
 #ifndef _WIN32
